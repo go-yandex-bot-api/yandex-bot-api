@@ -1,3 +1,3 @@
 module github.com/go-yandex-bot-api/yandex-bot-api
 
-go 1.25.4
+go 1.23

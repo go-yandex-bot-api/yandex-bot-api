@@ -1,0 +1,116 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: none
+  enable:
+    # Default linters
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    # Extra linters
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - copyloopvar
+    - dogsled
+    - dupl
+    - dupword
+    - durationcheck
+    - errname
+    - errorlint
+    - forcetypeassert
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - goprintffuncname
+    - gosec
+    - lll
+    - makezero
+    - mirror
+    - misspell
+    - mnd
+    - musttag
+    - nakedret
+    - nestif
+    - nilerr
+    - nilnil
+    - noctx
+    - nolintlint
+    - nosprintfhostport
+    - perfsprint
+    - prealloc
+    - predeclared
+    - reassign
+    - revive
+    - sloglint
+    - testifylint
+    - tparallel
+    - unconvert
+    - unparam
+    - usestdlibvars
+    - whitespace
+
+  settings:
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+    gocyclo:
+      min-complexity: 20
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+      disabled-checks:
+        - hugeParam
+    errorlint:
+      errorf: true
+      asserts: true
+      comparison: true
+    revive:
+      severity: warning
+      rules:
+        - name: exported
+          arguments:
+            - "disableStutteringCheck"
+    sloglint:
+      no-mixed-args: true
+      kv-only: false
+      attr-only: true
+
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - gocyclo
+          - errcheck
+          - dupl
+          - gosec
+          - mnd
+          - lll
+      - path: examples/
+        linters:
+          - revive
+          - mnd
+          - errcheck
+          - forcetypeassert
+          - gosec
+          - lll
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

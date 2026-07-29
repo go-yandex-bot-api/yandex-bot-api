@@ -1,0 +1,13 @@
+[book]
+authors = ["yandex-bot-api contributors"]
+language = "ru"
+
+src = "src"
+title = "Yandex Bot API (Golang)"
+
+[output.html]
+additional-css = []
+additional-js = []
+git-repository-url = "https://github.com/go-yandex-bot-api/yandex-bot-api"
+
+edit-url-template = "https://github.com/go-yandex-bot-api/yandex-bot-api/edit/main/docs/src/{path}"

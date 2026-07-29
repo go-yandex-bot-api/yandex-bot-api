@@ -1,0 +1,6 @@
+.docs/
+.vscode/
+.env
+coverage
+*.exe
+docs/book/
