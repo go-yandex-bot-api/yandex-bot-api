@@ -10,6 +10,7 @@ import (
 	"github.com/go-yandex-bot-api/yandex-bot-api/api/updates"
 	"github.com/go-yandex-bot-api/yandex-bot-api/api/users"
 	"github.com/go-yandex-bot-api/yandex-bot-api/api/webhooks"
+	"github.com/go-yandex-bot-api/yandex-bot-api/pkg/format"
 	"github.com/go-yandex-bot-api/yandex-bot-api/pkg/fsm"
 	"github.com/go-yandex-bot-api/yandex-bot-api/types"
 )
@@ -240,3 +241,12 @@ type Sender = types.Sender
 
 // RequestFile represents a file stream or path for file upload requests.
 type RequestFile = types.RequestFile
+
+// FormatBuilder helps construct Markdown formatted strings using a fluent API.
+type FormatBuilder = format.Builder
+
+// NewFormatBuilder creates a new Builder instance for Markdown formatting.
+func NewFormatBuilder() *FormatBuilder {
+	return format.NewBuilder()
+}
+

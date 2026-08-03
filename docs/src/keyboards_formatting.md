@@ -87,8 +87,8 @@ func sendKeyboard(c *router.Context) error {
 import "github.com/go-yandex-bot-api/yandex-bot-api/pkg/format"
 ```
 
-### Доступные функции:
-- `format.Escape(text string)` — Экранирование специальных символов Markdown (`*`, `_`, `~`, `+`, `` ` ``, `[`, `]`, `\`), чтобы они выводились как обычный текст.
+### 1. Атомарные функции форматирования
+- `format.Escape(text string)` — Экранирование специальных символов Markdown (`*`, `_`, `~`, `+`, `` ` ``, `[`, `]`, `\`).
 - `format.Bold(text string)` — **Жирный** текст (`**text**`).
 - `format.Italic(text string)` — __Курсив__ (`__text__`).
 - `format.Strikethrough(text string)` — ~~Зачеркнутый~~ текст (`~~text~~`).
@@ -96,6 +96,53 @@ import "github.com/go-yandex-bot-api/yandex-bot-api/pkg/format"
 - `format.Code(text string)` — Строчный фрагмент кода.
 - `format.CodeBlock(text, language string)` — Многострочный блок кода с поддержкой подсветки синтаксиса.
 - `format.Link(text, url string)` — [Кликабельная ссылка](url).
+- `format.Quote(text string)` — Цитата (`> text`). Поддерживает многострочный текст.
+- `format.BulletList(items []string)` — Маркированный список (`• item`).
+- `format.NumberedList(items []string)` — Нумерованный список (`1. item`).
+- `format.Header(text string)` — Заголовок первого уровня (`# text`).
+- `format.HeaderLevel(level int, text string)` — Заголовок уровня 1–6 (`## text`).
+- `format.KeyVal(key, value string)` — Пара ключ-значение (`**Key:** Value`).
+- `format.Divider()` — Горизонтальная линия-разделитель (`━━━━━━`).
+
+### 2. Fluent Builder API (`format.NewBuilder()`)
+Для удобной и производительной сборки сложных сообщений без ручной конкатенации строк используется Builder с цепочкой методов:
+
+```go
+func sendDashboard(c *router.Context) error {
+	msg := format.NewBuilder().
+		Header("Отчет по серверу").
+		NewLine().
+		Divider().
+		NewLine().
+		KeyVal("Статус", "Active").
+		NewLine().
+		KeyVal("Аптайм", "99.9%").
+		NewLine().
+		Quote("Все службы работают без сбоев.").
+		NewLine().
+		Bold("Компоненты:").
+		NewLine().
+		BulletList([]string{
+			"PostgreSQL: OK",
+			"Redis: OK",
+		}).
+		String()
+
+	return c.Reply(msg)
+}
+```
+
+### 3. Автоматическая разбивка длинных сообщений (`format.Split`)
+Максимальная длина текстового сообщения в Яндекс Мессенджере составляет **6000 символов**. Если сообщение превышает этот лимит, отправка завершится ошибкой. Функция `format.Split` аккуратно разбивает длинный текст по абзацам (`\n\n`), строкам (`\n`) или пробелам без разрыва UTF-8 символов.
+
+```go
+// SplitDefault разбивает текст по дефолтному лимиту Яндекса (6000 символов)
+chunks := format.SplitDefault(veryLongText)
+
+for _, chunk := range chunks {
+	_, _ = bot.Messages.SendText(ctx, messages.NewSendTextRequest().SetChatID(chatID).SetText(chunk))
+}
+```
 
 ### Пример использования
 ```go
