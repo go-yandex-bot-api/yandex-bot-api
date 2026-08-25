@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -362,30 +363,129 @@ func (c *Context) FirstFile() (*types.File, bool) {
 	return nil, false
 }
 
+// sanitizeJSONFloatInts removes trailing ".0" (and multiple ".00...") from whole float numbers outside JSON strings.
+// This allows seamless unmarshaling into Go integer struct fields when Yandex sends "101.0" instead of 101,
+// while strictly preserving fractional floating numbers like 5.6, 5.06, and string literals like "app 1.0".
+func sanitizeJSONFloatInts(src []byte) []byte {
+	out := make([]byte, 0, len(src))
+	inString := false
+	escaped := false
+
+	for i := 0; i < len(src); i++ {
+		b := src[i]
+		if escaped {
+			escaped = false
+			out = append(out, b)
+			continue
+		}
+		if b == '\\' && inString {
+			escaped = true
+			out = append(out, b)
+			continue
+		}
+		if b == '"' {
+			inString = !inString
+			out = append(out, b)
+			continue
+		}
+
+		if !inString && b == '.' && i+1 < len(src) && src[i+1] == '0' {
+			k := i + 1
+			for k < len(src) && src[k] == '0' {
+				k++
+			}
+			if k == len(src) || src[k] == ',' || src[k] == '}' ||
+				src[k] == ']' || src[k] == ' ' || src[k] == '\t' ||
+				src[k] == '\n' || src[k] == '\r' {
+				i = k - 1
+				continue
+			}
+		}
+		out = append(out, b)
+	}
+	return out
+}
+
+func unmarshalFlexible(raw []byte, dest interface{}) error {
+	if err := json.Unmarshal(raw, dest); err == nil {
+		return nil
+	}
+	// Fallback with sanitized float integers (e.g. 101.0 -> 101)
+	return json.Unmarshal(sanitizeJSONFloatInts(raw), dest)
+}
+
+func unmarshalValueWrapper(raw []byte, dest interface{}) bool {
+	var wrapper map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &wrapper); err == nil {
+		if val, exists := wrapper["value"]; exists {
+			return unmarshalFlexible(val, dest) == nil
+		}
+	}
+	if err := json.Unmarshal(sanitizeJSONFloatInts(raw), &wrapper); err == nil {
+		if val, exists := wrapper["value"]; exists {
+			return unmarshalFlexible(val, dest) == nil
+		}
+	}
+	return false
+}
+
+func bindStringPayload(strPayload string, dest interface{}) bool {
+	trimmed := strings.TrimSpace(strPayload)
+	isJSONContainer := (strings.HasPrefix(trimmed, "{") && strings.HasSuffix(trimmed, "}")) ||
+		(strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]"))
+
+	if isJSONContainer {
+		if err := unmarshalFlexible([]byte(strPayload), dest); err == nil {
+			return true
+		}
+		if unmarshalValueWrapper([]byte(strPayload), dest) {
+			return true
+		}
+	}
+
+	if strPtr, ok := dest.(*string); ok {
+		*strPtr = strPayload
+		return true
+	}
+
+	return false
+}
+
 // BindPayload unmarshals the payload from an ActionButton click into dest.
-// It supports both structs/maps and primitive target pointers (e.g. &int, &string).
+// It transparently handles:
+// 1. Direct JSON objects and arrays (Desktop and Web clients).
+// 2. String-escaped JSON payloads (Mobile iOS and Android clients).
+// 3. Normalized {"value": ...} envelopes for primitive types (both direct and string-escaped).
+// 4. Coercion of float formatted integers (e.g. 101.0 -> 101).
+// 5. Raw primitive strings and values.
 func (c *Context) BindPayload(dest interface{}) error {
 	if c.Update.BotRequest == nil || c.Update.BotRequest.ServerAction == nil ||
-		c.Update.BotRequest.ServerAction.Payload == nil {
+		len(c.Update.BotRequest.ServerAction.Payload) == 0 ||
+		string(c.Update.BotRequest.ServerAction.Payload) == "null" {
 		return errors.New("no payload to bind")
 	}
 
 	payloadRaw := c.Update.BotRequest.ServerAction.Payload
 
-	// 1. Try unmarshaling directly into dest
-	if err := json.Unmarshal(payloadRaw, dest); err == nil {
-		return nil
-	}
-
-	// 2. If payload was normalized into {"value": ...}, try extracting "value"
-	var wrapper map[string]json.RawMessage
-	if err := json.Unmarshal(payloadRaw, &wrapper); err == nil {
-		if val, exists := wrapper["value"]; exists {
-			return json.Unmarshal(val, dest)
+	// 1. Check if payload is a serialized JSON string (common on mobile iOS/Android clients)
+	var strPayload string
+	if err := json.Unmarshal(payloadRaw, &strPayload); err == nil {
+		if bindStringPayload(strPayload, dest) {
+			return nil
 		}
 	}
 
-	return json.Unmarshal(payloadRaw, dest)
+	// 2. Direct unmarshal (Desktop/Web: native JSON object, array, or primitive)
+	if err := unmarshalFlexible(payloadRaw, dest); err == nil {
+		return nil
+	}
+
+	// 3. Desktop/Web normalized wrapper: {"value": ...} for primitive types
+	if unmarshalValueWrapper(payloadRaw, dest) {
+		return nil
+	}
+
+	return unmarshalFlexible(payloadRaw, dest)
 }
 
 // HandlerFunc is the signature for functions that process an Update.
@@ -666,6 +766,7 @@ func (r *Router) Process(ctx context.Context, u types.Update) error {
 }
 
 // resolveHandler finds the target handler for an update without executing middlewares.
+//
 //nolint:gocyclo // complex routing logic intentionally handles many update types
 func (r *Router) resolveHandler(u types.Update) HandlerFunc {
 	r.mu.RLock()

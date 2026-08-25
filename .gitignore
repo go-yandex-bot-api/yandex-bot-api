@@ -4,3 +4,4 @@
 coverage
 *.exe
 docs/book/
+.cache/
