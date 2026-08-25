@@ -59,6 +59,60 @@ func TestService_SendText_ValidationError(t *testing.T) {
 	}
 }
 
+func TestService_EditText(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/bot/v1/messages/sendText/" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		var req SendTextRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("failed to decode request: %v", err)
+		}
+		if req.Text != "Updated Text" || req.ChatID != "chat_123" || req.MessageID != 555 {
+			t.Errorf("unexpected request payload: %+v", req)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(types.SendResponse{
+			Ok:        true,
+			MessageID: 555,
+		})
+	}))
+	defer server.Close()
+
+	client := core.NewClient("test-token", core.WithAPIURL(server.URL+"/bot/v1/"))
+	svc := NewService(client)
+
+	resp, err := svc.EditText(context.Background(), EditTextRequest{
+		ChatID:    "chat_123",
+		MessageID: 555,
+		Text:      "Updated Text",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.MessageID != 555 {
+		t.Errorf("expected MessageID 555, got %d", resp.MessageID)
+	}
+}
+
+func TestService_EditText_ValidationError(t *testing.T) {
+	svc := NewService(nil)
+	_, err := svc.EditText(context.Background(), EditTextRequest{})
+	if err == nil {
+		t.Error("expected error for empty ChatID and Login, got nil")
+	}
+
+	_, err = svc.EditText(context.Background(), EditTextRequest{ChatID: "c1"})
+	if err == nil {
+		t.Error("expected error for empty MessageID, got nil")
+	}
+
+	_, err = svc.EditText(context.Background(), EditTextRequest{ChatID: "c1", MessageID: 10})
+	if err == nil {
+		t.Error("expected error for empty Text, got nil")
+	}
+}
+
 func TestService_SendSystemMessage(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/bot/v1/messages/sendSystemMessage/" {

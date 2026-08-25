@@ -64,7 +64,38 @@ r.HandleButton("btn_hi", func(c *router.Context) error {
 
 ---
 
-## 2. Системные сообщения
+## 2. Редактирование сообщений
+
+Яндекс Мессенджер позволяет редактировать уже отправленные ботом текстовые сообщения и инлайн-клавиатуры по их `message_id`.
+
+### Использование `bot.Messages.EditText` (Сервисный уровень)
+```go
+resp, err := bot.Messages.EditText(ctx, yabotapi.EditTextRequest{
+    ChatID:    "0/0/chat_id_here", // или Login: "username"
+    MessageID: 123456789,
+    Text:      "Обновленный текст сообщения!",
+})
+```
+
+### Использование в Роутере (`c.EditCurrentMessage` / `c.EditMessage`)
+Внутри обработчиков нажатий на кнопки (`r.HandleButton`) удобнее всего использовать метод `c.EditCurrentMessage` или `c.EditCurrentMessageWithKeyboard` — он автоматически определит ID сообщения и бесшовно отредактирует его:
+
+```go
+// Редактирование текущего сообщения при нажатии на кнопку
+r.HandleButton("refresh_info", func(c *router.Context) error {
+    return c.EditCurrentMessagef("Данные обновлены в %s!", time.Now().Format("15:04:05"))
+})
+
+// Редактирование текста и клавиатуры на лету (идеально для пагинации)
+r.HandleButton("next_page", func(c *router.Context) error {
+    newKeyboard := buildKeyboardForPage(2)
+    return c.EditCurrentMessageWithKeyboard("Страница 2 из 5", newKeyboard)
+})
+```
+
+---
+
+## 3. Системные сообщения
 
 Системные сообщения обычно выглядят как сервисные уведомления в чате (как правило, центрированные). Для них используется метод `SendSystemMessage`.
 
@@ -77,7 +108,7 @@ resp, err := bot.Messages.SendSystemMessage(ctx, messages.SendSystemMessageReque
 
 ---
 
-## 3. Отправка стикеров
+## 4. Отправка стикеров
 
 Стикеры отправляются с помощью метода `SendSticker`. Для этого нужно знать ID стикерпака (`StickerSetID`) и ID самого стикера (`StickerID`).
 
@@ -92,7 +123,7 @@ resp, err := bot.Messages.SendSticker(ctx, messages.SendStickerRequest{
 
 ---
 
-## 4. Индикатор набора текста
+## 5. Индикатор набора текста
 
 Если ваш бот выполняет долгую операцию, рекомендуется отправить индикатор набора текста (typing), чтобы пользователь понимал, что бот "думает".
 
@@ -105,7 +136,7 @@ err := bot.Messages.SendTyping(ctx, messages.SendTypingRequest{
 
 ---
 
-## 5. Управление сообщениями (Удаление, Закрепление, Открепление)
+## 6. Управление сообщениями (Удаление, Закрепление, Открепление)
 
 API предоставляет возможности для управления уже отправленными сообщениями. Все эти методы принимают ID чата/пользователя и `MessageID` целевого сообщения.
 

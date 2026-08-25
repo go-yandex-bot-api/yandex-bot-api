@@ -50,7 +50,7 @@ func main() {
 		// Если это текстовое сообщение (а не системное или callback от кнопки)
 		if update.Text != "" {
 			// Формируем ответ (эхо)
-			reply := yabotapi.NewReply(update, "Вы сказали: "+update.Text)
+			reply := yabotapi.NewReply(&update, "Вы сказали: "+update.Text)
 			
 			// Отправляем сообщение обратно
 			if _, err := bot.Messages.SendText(ctx, reply); err != nil {

@@ -37,3 +37,34 @@ func TestNewReply(t *testing.T) {
 		}
 	})
 }
+
+func TestNewEdit(t *testing.T) {
+	t.Run("nil update", func(t *testing.T) {
+		req := NewEdit(nil, 123, "new text")
+		if req.Text != "" {
+			t.Errorf("expected empty request for nil update, got %+v", req)
+		}
+	})
+
+	t.Run("edit in chat", func(t *testing.T) {
+		u := &types.Update{
+			Chat:     &types.Chat{ID: "group_123"},
+			ThreadID: 10,
+		}
+		req := NewEdit(u, 999, "edited text")
+		if req.ChatID != "group_123" || req.MessageID != 999 || req.ThreadID != 10 || req.Text != "edited text" {
+			t.Errorf("unexpected edit request: %+v", req)
+		}
+	})
+
+	t.Run("edit with keyboard", func(t *testing.T) {
+		u := &types.Update{
+			From: &types.Sender{Login: "john_doe"},
+		}
+		kb := NewSuggestButtons(true, NewSimpleActionButton("Btn", "act"))
+		req := NewEditWithKeyboard(u, 888, "edited with kb", kb)
+		if req.Login != "john_doe" || req.MessageID != 888 || req.SuggestButtons == nil {
+			t.Errorf("unexpected edit with keyboard request: %+v", req)
+		}
+	})
+}

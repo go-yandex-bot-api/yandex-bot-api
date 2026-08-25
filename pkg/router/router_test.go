@@ -210,3 +210,34 @@ func TestContext_Helpers(t *testing.T) {
 		t.Errorf("expected ChatID chat_999, got %s", c.ChatID())
 	}
 }
+
+func TestContext_EditHelpers(t *testing.T) {
+	u := types.Update{
+		MessageID: 101,
+		From:      &types.Sender{Login: "admin_user"},
+		Chat:      &types.Chat{ID: "chat_999"},
+	}
+
+	c := &Context{Update: u}
+
+	if c.MessageID() != 101 {
+		t.Errorf("expected MessageID 101, got %d", c.MessageID())
+	}
+
+	// Without Bot initialized, methods should fail gracefully
+	if err := c.EditMessage(101, "new text"); err == nil {
+		t.Error("expected error when Bot is nil in EditMessage")
+	}
+	if err := c.EditCurrentMessage("new text"); err == nil {
+		t.Error("expected error when Bot is nil in EditCurrentMessage")
+	}
+	if err := c.EditCurrentMessageWithKeyboard("new text", nil); err == nil {
+		t.Error("expected error when Bot is nil in EditCurrentMessageWithKeyboard")
+	}
+
+	// Test zero message_id error
+	emptyContext := &Context{Update: types.Update{}}
+	if err := emptyContext.EditCurrentMessage("new text"); err == nil {
+		t.Error("expected error for empty message_id in EditCurrentMessage")
+	}
+}

@@ -65,6 +65,9 @@ type CreateChatRequest = chats.CreateChatRequest
 // SendTextRequest represents parameters for sending a text message.
 type SendTextRequest = messages.SendTextRequest
 
+// EditTextRequest represents parameters for editing an existing message.
+type EditTextRequest = messages.EditTextRequest
+
 // SendFileRequest represents parameters for sending a file.
 type SendFileRequest = files.SendFileRequest
 

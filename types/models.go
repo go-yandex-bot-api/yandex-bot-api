@@ -155,3 +155,14 @@ func (u *Update) GetFromLogin() UserLogin {
 	}
 	return ""
 }
+
+// GetMessageID safely returns the MessageID or ReplyMessageID of the update.
+func (u *Update) GetMessageID() MessageID {
+	if u == nil {
+		return 0
+	}
+	if u.MessageID != 0 {
+		return u.MessageID
+	}
+	return u.ReplyMessageID
+}

@@ -12,7 +12,7 @@ if err != nil {
     log.Fatalf("Ошибка получения данных бота: %v", err)
 }
 
-fmt.Printf("Имя бота: %s, Логин: %s\n", botInfo.Name, botInfo.Login)
+fmt.Printf("Имя бота: %s, Логин: %s\n", botInfo.DisplayName, botInfo.Login)
 ```
 
 ## Получение диплинка пользователя (`GetUserLink`)
@@ -27,5 +27,5 @@ if err != nil {
     log.Printf("Ошибка получения ссылки на пользователя: %v", err)
 }
 
-fmt.Printf("Ссылка на чат: %s\n", linkResp.ChatURL)
+fmt.Printf("Ссылка на чат: %s\n", linkResp.ChatLink)
 ```

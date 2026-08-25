@@ -28,6 +28,7 @@ func main() {
 		keyboard := yabotapi.NewSuggestButtonsGrid(true,
 			[]yabotapi.InlineSuggestButton{
 				yabotapi.NewSimpleActionButton("Say Hi", "btn_hi"),
+				yabotapi.NewSimpleActionButton("Edit Message ✨", "btn_edit"),
 				yabotapi.NewSimpleActionButton("Say Bye", "btn_bye"),
 			},
 			[]yabotapi.InlineSuggestButton{
@@ -42,6 +43,16 @@ func main() {
 	// Handle button clicks
 	r.HandleButton("btn_hi", func(c *router.Context) error {
 		return c.Reply("Hi there! 👋")
+	})
+
+	r.HandleButton("btn_edit", func(c *router.Context) error {
+		newKb := yabotapi.NewSuggestButtonsGrid(true,
+			[]yabotapi.InlineSuggestButton{
+				yabotapi.NewSimpleActionButton("Say Hi", "btn_hi"),
+				yabotapi.NewSimpleActionButton("Say Bye", "btn_bye"),
+			},
+		)
+		return c.EditCurrentMessageWithKeyboard("✨ This message was edited in-place!", newKb)
 	})
 
 	r.HandleButton("btn_bye", func(c *router.Context) error {

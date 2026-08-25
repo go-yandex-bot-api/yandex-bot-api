@@ -196,6 +196,102 @@ func (c *Context) SendTo(recipient, text string) error {
 	return err
 }
 
+// MessageID returns the MessageID of the incoming update safely.
+func (c *Context) MessageID() types.MessageID {
+	return c.Update.GetMessageID()
+}
+
+// EditMessage edits an existing message text by its MessageID.
+func (c *Context) EditMessage(messageID types.MessageID, text string) error {
+	if c.Bot == nil {
+		return errors.New("bot is not set in context")
+	}
+	if messageID == 0 {
+		return errors.New("message_id cannot be 0")
+	}
+
+	var req messages.SendTextRequest
+	req.Text = text
+	req.MessageID = messageID
+	req.ThreadID = c.Update.ThreadID
+
+	if c.Update.Chat != nil && c.Update.Chat.ID != "" {
+		req.ChatID = c.Update.Chat.ID
+	} else if login := c.Update.GetFromLogin(); login != "" {
+		req.Login = login
+	} else {
+		return errors.New("cannot determine recipient for edit")
+	}
+
+	_, err := c.Bot.Messages.SendText(c.Ctx, req)
+	return err
+}
+
+// EditMessagef formats a string and edits an existing message text by its MessageID.
+func (c *Context) EditMessagef(messageID types.MessageID, format string, args ...any) error {
+	return c.EditMessage(messageID, fmt.Sprintf(format, args...))
+}
+
+// EditMessageWithKeyboard edits an existing message text and keyboard by its MessageID.
+func (c *Context) EditMessageWithKeyboard(messageID types.MessageID, text string, keyboard *types.SuggestButtons) error {
+	if c.Bot == nil {
+		return errors.New("bot is not set in context")
+	}
+	if messageID == 0 {
+		return errors.New("message_id cannot be 0")
+	}
+
+	var req messages.SendTextRequest
+	req.Text = text
+	req.MessageID = messageID
+	req.SuggestButtons = keyboard
+	req.ThreadID = c.Update.ThreadID
+
+	if c.Update.Chat != nil && c.Update.Chat.ID != "" {
+		req.ChatID = c.Update.Chat.ID
+	} else if login := c.Update.GetFromLogin(); login != "" {
+		req.Login = login
+	} else {
+		return errors.New("cannot determine recipient for edit")
+	}
+
+	_, err := c.Bot.Messages.SendText(c.Ctx, req)
+	return err
+}
+
+// EditMessageWithKeyboardf formats a string and edits an existing message text and keyboard by its MessageID.
+func (c *Context) EditMessageWithKeyboardf(messageID types.MessageID, keyboard *types.SuggestButtons, format string, args ...any) error {
+	return c.EditMessageWithKeyboard(messageID, fmt.Sprintf(format, args...), keyboard)
+}
+
+// EditCurrentMessage edits the message that triggered this update (useful in button handlers).
+func (c *Context) EditCurrentMessage(text string) error {
+	msgID := c.MessageID()
+	if msgID == 0 {
+		return errors.New("cannot determine message_id from current update")
+	}
+	return c.EditMessage(msgID, text)
+}
+
+// EditCurrentMessagef formats a string and edits the message that triggered this update.
+func (c *Context) EditCurrentMessagef(format string, args ...any) error {
+	return c.EditCurrentMessage(fmt.Sprintf(format, args...))
+}
+
+// EditCurrentMessageWithKeyboard edits the message that triggered this update with a new keyboard.
+func (c *Context) EditCurrentMessageWithKeyboard(text string, keyboard *types.SuggestButtons) error {
+	msgID := c.MessageID()
+	if msgID == 0 {
+		return errors.New("cannot determine message_id from current update")
+	}
+	return c.EditMessageWithKeyboard(msgID, text, keyboard)
+}
+
+// EditCurrentMessageWithKeyboardf formats a string and edits the message that triggered this update with a new keyboard.
+func (c *Context) EditCurrentMessageWithKeyboardf(keyboard *types.SuggestButtons, format string, args ...any) error {
+	return c.EditCurrentMessageWithKeyboard(fmt.Sprintf(format, args...), keyboard)
+}
+
 // SenderLogin returns the login of the update sender safely.
 func (c *Context) SenderLogin() types.UserLogin {
 	return c.Update.GetFromLogin()

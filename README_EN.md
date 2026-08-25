@@ -14,6 +14,7 @@ Provides convenient interaction with the Yandex Messenger API, router, paginatio
 ## Features
 
 - **Full Yandex API Coverage**: Send standard text, attach files, upload image galleries, create interactive polls, and complex inline keyboards.
+- **Message & Keyboard Editing**: Update text and inline buttons of sent messages in-place (`bot.Messages.EditText`, `c.EditCurrentMessage`, `c.EditCurrentMessageWithKeyboard`).
 - **Built-in Router**: Elegant and strict routing for incoming messages (`HandleCommand`, `HandleText`, `HandleButton`). Allows you to replace massive, unreadable `switch-case` constructs.
 - **Finite State Machine (FSM)**: Convenient user session management. Create complex multi-step dialogs (such as step-by-step surveys or shopping carts) while safely storing state data directly into the user context via `Context.FSM()`.
 - **Data Streaming**: Full support for the `io.Reader` interface, allowing you to upload files without saving them to the hard drive first. Perfect for instantly sending dynamically generated reports or graphics.
@@ -98,10 +99,10 @@ For ease of use, all API methods are grouped into domain-specific services. Afte
 
 * `bot.Updates` — Service for receiving incoming events (Polling).
 * `bot.Webhooks` — Service for setting, deleting, and processing Webhook requests from Yandex servers.
-* `bot.Messages` — Primary service for sending text, Markdown-formatted text, and inline keyboards.
+* `bot.Messages` — Primary service for sending and editing text (`EditText`), Markdown formatting, and inline keyboards.
 * `bot.Files` — Service for media handling (uploading and downloading audio, video, images).
 * `bot.Polls` — Service for creating polls and voting forms.
-* `bot.Info` — Service for fetching information about participants and group chat properties.
+* `bot.Chats` — Service for group chats and channels management (creation, listing, member management).
 * `bot.Users` — Service for managing user profiles.
 
 ## Advanced Bot Configuration
@@ -147,6 +148,7 @@ http.HandleFunc("/yandex/webhook", bot.Webhooks.ListenForWebhook(updatesChan))
 
 ## Reference Examples
 In the [`/examples`](./examples) directory, you will find ready-to-compile examples of bots designed to solve real-world tasks:
+- **`03_messages_and_keyboards`** — Sending and editing messages, inline buttons, and directives.
 - **`07_fsm_questionnaire`** — A survey bot featuring step-by-step user state preservation.
-- **`08_pagination`** — How to use inline keyboards and complex JSON payloads to create paginated menus.
+- **`08_pagination`** — Interactive pagination and in-place message editing with inline keyboards.
 - **`09_project_structure`** — An example of how to correctly organize and separate your handler code across multiple files (Dependency Injection pattern).

@@ -75,8 +75,7 @@ func sendKeyboard(c *router.Context) error {
 	)
 
 	return c.ReplyWithKeyboard("Выберите действие:", keyboard)
-}
-}
+})
 ```
 
 ## Форматирование текста

@@ -56,6 +56,47 @@ func (s *Service) SendText(ctx context.Context, req SendTextRequest) (*types.Sen
 	return &resp, nil
 }
 
+// EditTextRequest contains information about an edit message request.
+type EditTextRequest struct {
+	ChatID                types.ChatID          `json:"chat_id,omitempty"`
+	Login                 types.UserLogin       `json:"login,omitempty"`
+	MessageID             types.MessageID       `json:"message_id"`
+	Text                  string                `json:"text"`
+	ThreadID              types.ThreadID        `json:"thread_id,omitempty"`
+	DisableNotification   bool                  `json:"disable_notification,omitempty"`
+	Important             bool                  `json:"important,omitempty"`
+	DisableWebPagePreview bool                  `json:"disable_web_page_preview,omitempty"`
+	PayloadID             string                `json:"payload_id,omitempty"`
+	SuggestButtons        *types.SuggestButtons `json:"suggest_buttons,omitempty"`
+	ActionButtons         *types.ActionButtons  `json:"action_buttons,omitempty"`
+}
+
+// EditText edits an existing message text or its keyboard in a chat or DM.
+func (s *Service) EditText(ctx context.Context, req EditTextRequest) (*types.SendResponse, error) {
+	if req.ChatID == "" && req.Login == "" {
+		return nil, errors.New("chat_id or login is required")
+	}
+	if req.MessageID == 0 {
+		return nil, errors.New("message_id is required")
+	}
+	if req.Text == "" {
+		return nil, errors.New("text is required")
+	}
+	return s.SendText(ctx, SendTextRequest{
+		ChatID:                req.ChatID,
+		Login:                 req.Login,
+		Text:                  req.Text,
+		MessageID:             req.MessageID,
+		ThreadID:              req.ThreadID,
+		DisableNotification:   req.DisableNotification,
+		Important:             req.Important,
+		DisableWebPagePreview: req.DisableWebPagePreview,
+		PayloadID:             req.PayloadID,
+		SuggestButtons:        req.SuggestButtons,
+		ActionButtons:         req.ActionButtons,
+	})
+}
+
 // SendSystemMessageRequest contains information about a sendSystemMessage request.
 type SendSystemMessageRequest struct {
 	ChatID types.ChatID    `json:"chat_id,omitempty"`

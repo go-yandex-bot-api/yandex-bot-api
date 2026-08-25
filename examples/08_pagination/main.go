@@ -47,16 +47,16 @@ func main() {
 			return err
 		}
 
-		// Send the requested page
-		return sendPage(c, payload.Page)
+		// Edit the current message seamlessly with the new page content & buttons
+		return editPage(c, payload.Page)
 	})
 
 	log.Println("Pagination Bot is running. Send /start")
 	r.Start(ctx, updatesChannel)
 }
 
-// sendPage builds the keyboard for the specific page and sends it.
-func sendPage(c *router.Context, page int) error {
+// buildKeyboard builds the navigation buttons for a given page.
+func buildKeyboard(page int) *yabotapi.SuggestButtons {
 	var buttons []yabotapi.InlineSuggestButton
 
 	// Add "Prev" button if we are not on the first page
@@ -71,9 +71,17 @@ func sendPage(c *router.Context, page int) error {
 		buttons = append(buttons, btn)
 	}
 
-	// Create a persistent keyboard (so it doesn't disappear when clicked)
-	keyboard := yabotapi.NewSuggestButtonsGrid(true, buttons)
+	return yabotapi.NewSuggestButtonsGrid(true, buttons)
+}
 
-	// Send the message with the keyboard
+// sendPage builds the keyboard for the specific page and sends a new message.
+func sendPage(c *router.Context, page int) error {
+	keyboard := buildKeyboard(page)
 	return c.ReplyWithKeyboardf(keyboard, "📄 You are viewing Page %d of %d", page, MaxPages)
+}
+
+// editPage edits the current message in-place with the requested page.
+func editPage(c *router.Context, page int) error {
+	keyboard := buildKeyboard(page)
+	return c.EditCurrentMessageWithKeyboardf(keyboard, "📄 You are viewing Page %d of %d (updated in-place)", page, MaxPages)
 }
