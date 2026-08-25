@@ -45,7 +45,7 @@ func PaginateSlice(totalItems, page, limit int) (start, end, totalPages int) {
 func NewPaginationRow(currentPage, totalPages int, actionName string) []yabotapi.InlineSuggestButton {
 	var row []yabotapi.InlineSuggestButton
 
-	// Если страниц 0 или 1, навигация не нужна
+	// If pages <= 1, navigation is not needed
 	if totalPages <= 1 {
 		return row
 	}
@@ -58,7 +58,7 @@ func NewPaginationRow(currentPage, totalPages int, actionName string) []yabotapi
 		currentPage = totalPages
 	}
 
-	// Кнопка "Назад"
+	// "Prev" button
 	if currentPage > 1 {
 		row = append(row, yabotapi.InlineSuggestButton{
 			Title: "⬅️ Назад",
@@ -68,7 +68,7 @@ func NewPaginationRow(currentPage, totalPages int, actionName string) []yabotapi
 		})
 	}
 
-	// Индикатор текущей страницы (При нажатии просто обновит текущую страницу)
+	// Current page indicator
 	row = append(row, yabotapi.InlineSuggestButton{
 		Title: fmt.Sprintf("%d / %d", currentPage, totalPages),
 		Directives: []yabotapi.Directive{
@@ -76,7 +76,7 @@ func NewPaginationRow(currentPage, totalPages int, actionName string) []yabotapi
 		},
 	})
 
-	// Кнопка "Вперед"
+	// "Next" button
 	if currentPage < totalPages {
 		row = append(row, yabotapi.InlineSuggestButton{
 			Title: "Вперед ➡️",

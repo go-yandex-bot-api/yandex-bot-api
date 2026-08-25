@@ -51,7 +51,12 @@ func NewEdit(u *types.Update, messageID types.MessageID, text string) messages.S
 }
 
 // NewEditWithKeyboard creates a SendTextRequest targeted at editing an existing message with a new keyboard.
-func NewEditWithKeyboard(u *types.Update, messageID types.MessageID, text string, keyboard *types.SuggestButtons) messages.SendTextRequest {
+func NewEditWithKeyboard(
+	u *types.Update,
+	messageID types.MessageID,
+	text string,
+	keyboard *types.SuggestButtons,
+) messages.SendTextRequest {
 	req := NewEdit(u, messageID, text)
 	req.SuggestButtons = keyboard
 	return req

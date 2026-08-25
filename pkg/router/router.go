@@ -233,7 +233,11 @@ func (c *Context) EditMessagef(messageID types.MessageID, format string, args ..
 }
 
 // EditMessageWithKeyboard edits an existing message text and keyboard by its MessageID.
-func (c *Context) EditMessageWithKeyboard(messageID types.MessageID, text string, keyboard *types.SuggestButtons) error {
+func (c *Context) EditMessageWithKeyboard(
+	messageID types.MessageID,
+	text string,
+	keyboard *types.SuggestButtons,
+) error {
 	if c.Bot == nil {
 		return errors.New("bot is not set in context")
 	}
@@ -260,7 +264,12 @@ func (c *Context) EditMessageWithKeyboard(messageID types.MessageID, text string
 }
 
 // EditMessageWithKeyboardf formats a string and edits an existing message text and keyboard by its MessageID.
-func (c *Context) EditMessageWithKeyboardf(messageID types.MessageID, keyboard *types.SuggestButtons, format string, args ...any) error {
+func (c *Context) EditMessageWithKeyboardf(
+	messageID types.MessageID,
+	keyboard *types.SuggestButtons,
+	format string,
+	args ...any,
+) error {
 	return c.EditMessageWithKeyboard(messageID, fmt.Sprintf(format, args...), keyboard)
 }
 
@@ -287,8 +296,12 @@ func (c *Context) EditCurrentMessageWithKeyboard(text string, keyboard *types.Su
 	return c.EditMessageWithKeyboard(msgID, text, keyboard)
 }
 
-// EditCurrentMessageWithKeyboardf formats a string and edits the message that triggered this update with a new keyboard.
-func (c *Context) EditCurrentMessageWithKeyboardf(keyboard *types.SuggestButtons, format string, args ...any) error {
+// EditCurrentMessageWithKeyboardf formats a string and edits the current message with a new keyboard.
+func (c *Context) EditCurrentMessageWithKeyboardf(
+	keyboard *types.SuggestButtons,
+	format string,
+	args ...any,
+) error {
 	return c.EditCurrentMessageWithKeyboard(fmt.Sprintf(format, args...), keyboard)
 }
 

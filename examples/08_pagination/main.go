@@ -83,5 +83,10 @@ func sendPage(c *router.Context, page int) error {
 // editPage edits the current message in-place with the requested page.
 func editPage(c *router.Context, page int) error {
 	keyboard := buildKeyboard(page)
-	return c.EditCurrentMessageWithKeyboardf(keyboard, "📄 You are viewing Page %d of %d (updated in-place)", page, MaxPages)
+	return c.EditCurrentMessageWithKeyboardf(
+		keyboard,
+		"📄 You are viewing Page %d of %d (updated in-place)",
+		page,
+		MaxPages,
+	)
 }
