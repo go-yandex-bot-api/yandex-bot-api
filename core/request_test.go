@@ -1,9 +1,16 @@
 package core
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"io"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/go-yandex-bot-api/yandex-bot-api/types"
 )
 
 func TestParseRetryAfter(t *testing.T) {
@@ -98,3 +105,115 @@ func TestParseRetryAfter(t *testing.T) {
 		})
 	}
 }
+
+func TestMimeByFilename(t *testing.T) {
+	tests := []struct {
+		filename string
+		want     string
+	}{
+		{"pic.png", "image/png"},
+		{"pic.PNG", "image/png"},
+		{"pic.jpg", "image/jpeg"},
+		{"pic.jpeg", "image/jpeg"},
+		{"anim.gif", "image/gif"},
+		{"banner.webp", "image/webp"},
+		{"video.mp4", "video/mp4"},
+		{"doc.pdf", "application/pdf"},
+		{"archive.zip", "application/octet-stream"},
+		{"noext", "application/octet-stream"},
+	}
+	for _, tt := range tests {
+		if got := mimeByFilename(tt.filename); got != tt.want {
+			t.Errorf("mimeByFilename(%q) = %q, want %q", tt.filename, got, tt.want)
+		}
+	}
+}
+
+type dummyMultipartPayload struct {
+	method  string
+	payload any
+	files   []types.RequestFile
+}
+
+func (d dummyMultipartPayload) Method() string              { return d.method }
+func (d dummyMultipartPayload) Payload() any                { return d.payload }
+func (d dummyMultipartPayload) Files() []types.RequestFile { return d.files }
+
+func TestMakeMultipartRequest(t *testing.T) {
+	const (
+		testFieldImage = "image"
+		testMimePNG    = "image/png"
+	)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST, got %s", r.Method)
+		}
+		mr, err := r.MultipartReader()
+		if err != nil {
+			t.Fatalf("MultipartReader error: %v", err)
+		}
+		var foundButtons, foundImage bool
+		for {
+			part, err := mr.NextPart()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				t.Fatalf("NextPart error: %v", err)
+			}
+			switch part.FormName() {
+			case "suggest_buttons":
+				foundButtons = true
+				ct := part.Header.Get("Content-Type")
+				if ct != "application/json; charset=utf-8" {
+					t.Errorf("expected buttons Content-Type application/json; charset=utf-8, got %s", ct)
+				}
+			case testFieldImage:
+				foundImage = true
+				ct := part.Header.Get("Content-Type")
+				if ct != testMimePNG {
+					t.Errorf("expected image Content-Type image/png, got %s", ct)
+				}
+			}
+			_ = part.Close()
+		}
+		if !foundButtons || !foundImage {
+			t.Errorf("missing parts: buttons=%v, image=%v", foundButtons, foundImage)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "message_id": 999})
+	}))
+	defer server.Close()
+
+	client := NewClient("test-token", WithAPIURL(server.URL+"/bot/v1/"))
+
+	payload := dummyMultipartPayload{
+		method: "messages/sendImage/",
+		payload: map[string]any{
+			"chat_id": "c123",
+			"suggest_buttons": map[string]any{
+				"buttons": []any{
+					map[string]any{"text": "btn"},
+				},
+			},
+		},
+		files: []types.RequestFile{
+			{
+				FieldName: testFieldImage,
+				FileName:  "test.png",
+				Stream:    bytes.NewReader([]byte("png content")),
+			},
+		},
+	}
+
+	var dest basicResponse
+	err := client.MakeMultipartRequest(context.Background(), "messages/sendImage/", payload, &dest)
+	if err != nil {
+		t.Fatalf("MakeMultipartRequest error: %v", err)
+	}
+	if !dest.Ok {
+		t.Errorf("expected ok: true, got false")
+	}
+}
+
