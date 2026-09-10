@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"mime/multipart"
 	"net/http"
+	"net/textproto"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -245,7 +246,15 @@ func (c *Client) MakeMultipartRequest(
 						pw.CloseWithError(fmt.Errorf("failed to marshal field %s: %w", key, err))
 						return
 					}
-					if err := writer.WriteField(key, string(b)); err != nil {
+					h := make(textproto.MIMEHeader)
+					h.Set("Content-Disposition", fmt.Sprintf(`form-data; name=%q`, key))
+					h.Set("Content-Type", "application/json; charset=utf-8")
+					part, err := writer.CreatePart(h)
+					if err != nil {
+						pw.CloseWithError(fmt.Errorf("failed to create field %s: %w", key, err))
+						return
+					}
+					if _, err := part.Write(b); err != nil {
 						pw.CloseWithError(fmt.Errorf("failed to write field %s: %w", key, err))
 						return
 					}
@@ -280,7 +289,40 @@ func (c *Client) MakeMultipartRequest(
 					openFiles = append(openFiles, fileCloser)
 				}
 
-				part, err := writer.CreateFormFile(reqFile.FieldName, filepath.Base(reqFile.FileName))
+				ct := reqFile.ContentType
+				if ct == "" {
+					name := reqFile.FileName
+					if name == "" {
+						name = reqFile.FilePath
+					}
+					ct = mimeByFilename(name)
+				}
+				if (reqFile.FieldName == "image" || reqFile.FieldName == "images") &&
+					(ct == "" || ct == "application/octet-stream") {
+					ct = "image/png"
+				}
+
+				fileName := reqFile.FileName
+				if fileName == "" {
+					switch {
+					case reqFile.FilePath != "":
+						fileName = filepath.Base(reqFile.FilePath)
+					case reqFile.FieldName == "image" || reqFile.FieldName == "images":
+						fileName = "image.png"
+					default:
+						fileName = "file"
+					}
+				}
+
+				h := make(textproto.MIMEHeader)
+				h.Set("Content-Disposition", fmt.Sprintf(
+					`form-data; name=%q; filename=%q`,
+					reqFile.FieldName,
+					filepath.Base(fileName),
+				))
+				h.Set("Content-Type", ct)
+
+				part, err := writer.CreatePart(h)
 				if err != nil {
 					pw.CloseWithError(fmt.Errorf("failed to create form file: %w", err))
 					return
@@ -552,4 +594,27 @@ func jitterBackoff(attempt int) time.Duration {
 		return 30 * time.Second //nolint:mnd // 30 seconds is the hard cap for exponential backoff
 	}
 	return dur
+}
+
+// mimeByFilename returns the MIME Content-Type for a file based on its extension.
+// For image methods (sendImage, sendGallery) the Yandex Messenger API strictly
+// requires a proper image/* type; sending "application/octet-stream" results in 415.
+// Falls back to "application/octet-stream" for unknown or generic binary formats.
+func mimeByFilename(name string) string {
+	switch strings.ToLower(filepath.Ext(name)) {
+	case ".png":
+		return "image/png"
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".gif":
+		return "image/gif"
+	case ".webp":
+		return "image/webp"
+	case ".mp4":
+		return "video/mp4"
+	case ".pdf":
+		return "application/pdf"
+	default:
+		return "application/octet-stream"
+	}
 }

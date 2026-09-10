@@ -9,8 +9,14 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-yandex-bot-api/yandex-bot-api/types"
+)
+
+const (
+	contentTypeOctetStream = "application/octet-stream"
+	contentTypeImagePNG    = "image/png"
 )
 
 //nolint:revive // exported function with intentional parameter naming for API clarity
@@ -84,7 +90,24 @@ func (p singleFilePayload) Files() []types.RequestFile {
 	if fileName == "" && p.FilePath != "" {
 		fileName = filepath.Base(p.FilePath)
 	}
-	return []types.RequestFile{{FieldName: p.FieldName, FileName: fileName, FilePath: p.FilePath, Stream: p.Stream}}
+	// For the "image" field the Yandex Messenger API strictly requires an image/* MIME type.
+	var ct string
+	if p.FieldName == "image" {
+		if fileName == "" {
+			fileName = "image.png"
+		}
+		ct = mimeByExtension(fileName)
+		if ct == contentTypeOctetStream {
+			ct = contentTypeImagePNG
+		}
+	}
+	return []types.RequestFile{{
+		FieldName:   p.FieldName,
+		FileName:    fileName,
+		FilePath:    p.FilePath,
+		Stream:      p.Stream,
+		ContentType: ct,
+	}}
 }
 
 //nolint:revive // exported function with intentional parameter naming for API clarity
@@ -279,14 +302,33 @@ func (p sendGalleryPayload) Payload() interface{} { return p }
 func (p sendGalleryPayload) Files() []types.RequestFile {
 	files := make([]types.RequestFile, 0, len(p.FilePaths)+len(p.Streams))
 	for _, path := range p.FilePaths {
-		files = append(files, types.RequestFile{FieldName: "images", FileName: filepath.Base(path), FilePath: path})
+		name := filepath.Base(path)
+		ct := mimeByExtension(name)
+		if ct == contentTypeOctetStream {
+			ct = contentTypeImagePNG
+		}
+		files = append(files, types.RequestFile{
+			FieldName:   "images",
+			FileName:    name,
+			FilePath:    path,
+			ContentType: ct,
+		})
 	}
 	for i, stream := range p.Streams {
-		fileName := fmt.Sprintf("image%d", i)
+		fileName := fmt.Sprintf("image%d.png", i)
 		if i < len(p.FileNames) && p.FileNames[i] != "" {
 			fileName = p.FileNames[i]
 		}
-		files = append(files, types.RequestFile{FieldName: "images", FileName: fileName, Stream: stream})
+		ct := mimeByExtension(fileName)
+		if ct == contentTypeOctetStream {
+			ct = contentTypeImagePNG
+		}
+		files = append(files, types.RequestFile{
+			FieldName:   "images",
+			FileName:    fileName,
+			Stream:      stream,
+			ContentType: ct,
+		})
 	}
 	return files
 }
@@ -373,4 +415,23 @@ func (s *Service) ShareGallery(ctx context.Context, req ShareGalleryRequest) (*t
 		return nil, err
 	}
 	return &resp, nil
+}
+
+// mimeByExtension returns the MIME Content-Type for a filename based on its extension.
+// The Yandex Messenger API strictly requires image/* for the image/images fields;
+// sending application/octet-stream results in HTTP 415 Unsupported Media Type.
+// Returns "application/octet-stream" for unknown extensions.
+func mimeByExtension(name string) string {
+	switch strings.ToLower(filepath.Ext(name)) {
+	case ".png":
+		return contentTypeImagePNG
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".gif":
+		return "image/gif"
+	case ".webp":
+		return "image/webp"
+	default:
+		return contentTypeOctetStream
+	}
 }
